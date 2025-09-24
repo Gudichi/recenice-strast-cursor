@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rečenice Strasti — Checkout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary: #EF798A;
+      --color-secondary: #F7A9A8;
+      --color-accent: #64113F;
+      --color-bg: #FDFDFD;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--color-bg); color: #222; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap {
+      min-height: 100dvh; display: grid; place-items: center; padding: 32px;
+    }
+    .card {
+      width: 100%; max-width: 720px; background: white; border: 1px solid #eee; border-radius: var(--radius); padding: 32px; box-shadow: 0 10px 30px rgba(100,17,63,0.07);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    }
+    .brand-mark {
+      width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    }
+    h1 { font-size: 28px; margin: 0; color: var(--color-accent); letter-spacing: 0.2px; }
+    p { margin: 8px 0 0 0; color: #444; }
+
+    .cta {
+      margin-top: 24px; display: inline-flex; align-items: center; gap: 10px; background: var(--color-primary); color: white; padding: 14px 18px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; box-shadow: 0 8px 18px rgba(239,121,138,0.3);
+    }
+    .cta:hover { filter: brightness(0.98); }
+
+    .footer { margin-top: 24px; font-size: 13px; color: #666; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <h1>Rečenice Strasti</h1>
+          <p>Digitalni proizvod “Savršeni” — 1,00 €</p>
+        </div>
+      </div>
+
+      <button id="startCheckout" class="cta">Kupi sada — 1,00 €</button>
+
+      <div id="checkout" class="hidden">
+        <div id="payment-element"></div>
+        <button id="submit" class="cta" style="margin-top:16px">Plati</button>
+        <div id="error-message" class="footer"></div>
+      </div>
+
+      <div class="footer">Plaćanje osigurano Stripe-om. Podržane kartice, Apple Pay i Google Pay.</div>
+    </div>
+  </div>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    let stripe, elements, paymentElement;
+
+    async function fetchConfig() {
+      const res = await fetch('/.netlify/functions/config');
+      return await res.json();
+    }
+
+    async function createPaymentIntent() {
+      const res = await fetch('/.netlify/functions/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 100, currency: 'eur' })
+      });
+      return await res.json();
+    }
+
+    async function mountElement() {
+      const { publishableKey } = await fetchConfig();
+      stripe = Stripe(publishableKey, { apiVersion: '2024-06-20' });
+
+      const { clientSecret } = await createPaymentIntent();
+      elements = stripe.elements({ clientSecret, locale: 'hr' });
+
+      paymentElement = elements.create('payment', {
+        layout: { type: 'tabs' },
+        defaultValues: { billingDetails: { email: '' } }
+      });
+      paymentElement.mount('#payment-element');
+    }
+
+    document.getElementById('startCheckout').addEventListener('click', async () => {
+      document.getElementById('startCheckout').classList.add('hidden');
+      document.getElementById('checkout').classList.remove('hidden');
+      await mountElement();
+    });
+
+    document.getElementById('submit').addEventListener('click', async () => {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.origin + '/success.html'
+        }
+      });
+      if (error) {
+        document.getElementById('error-message').textContent = error.message || 'Došlo je do greške.';
+      }
+    });
+  </script>
+</body>
+</html>

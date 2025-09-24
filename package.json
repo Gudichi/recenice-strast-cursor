@@ -1,0 +1,21 @@
+{
+  "name": "stripe-custom-checkout",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "NODE_ENV=production node server.js",
+    "webhook": "stripe listen --forward-to localhost:4242/webhook | cat"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "stripe": "^18.5.0"
+  }
+}
